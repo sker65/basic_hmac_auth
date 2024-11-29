@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+
+	"github.com/SenseUnit/basic_hmac_auth/handler"
 )
 
 var version = "undefined"
@@ -52,8 +53,8 @@ func run() int {
 	}
 
 	if hs == "" {
-		log.Print(`secret is not specified! Please set "-secret" or "-secret-file"`+
-		` command line options or `+envKeySecret+` environment variable.`)
+		log.Print(`secret is not specified! Please set "-secret" or "-secret-file"` +
+			` command line options or ` + envKeySecret + ` environment variable.`)
 		return 2
 	}
 
@@ -63,8 +64,13 @@ func run() int {
 		return 3
 	}
 
-	log.Printf("secret=%x\n", secret)
-
+	err = (&handler.BasicHMACAuthHandler{
+		Secret: secret,
+	}).Run(os.Stdin, os.Stdout)
+	if err != nil {
+		log.Printf("auth handler terminated with error: %v", err)
+		return 1
+	}
 	return 0
 }
 
@@ -77,7 +83,7 @@ func readSecretFromFile(filename string) (string, error) {
 
 	rd := bufio.NewReader(f)
 	buf, err := rd.ReadBytes('\n')
-	if err != nil && !errors.Is(err, io.EOF) {
+	if err != nil && err != io.EOF {
 		return "", fmt.Errorf("secret file reading failed: %w", err)
 	}
 
