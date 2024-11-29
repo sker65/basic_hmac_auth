@@ -2,7 +2,9 @@
 
 HMAC auth helper for Squid.
 
-basic\_hmac\_auth helper enables Squid basic authentication with HMAC-signatures passed as username and password. In that scheme username represents user login as usual and password should be constructed as follows:
+Authentication with HMAC signatures essentially allows fleet of proxies to use centralized authentication without the need for proxies to communicate with any central server directly. It works like this: some entity (e.g. API server) issues issues HMAC-signed token with limited time validity to users. Users can't forge HMAC-signed token because they don't know secret key, while proxy can validate signature sent by user as credentials and decide to allow access immediately, without any need to communicate with central server or database to check user's password and status. All relevant information to allow access is already carried by users within their requests.
+
+basic\_hmac\_auth helper enables Squid basic authentication with HMAC-signatures passed as username and password, leveraging classic login-password scheme to carry HMAC signatures. In that scheme username represents user login as usual and password should be constructed as follows:
 
 *password := urlsafe\_base64\_without\_padding(expire\_timestamp || hmac\_sha256(secret, "dumbproxy grant token v1" || username || expire\_timestamp))*
 
