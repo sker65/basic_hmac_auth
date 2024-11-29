@@ -2,7 +2,11 @@
 
 HMAC auth helper for Squid.
 
-basic\_hmac\_auth helper enables Squid basic authentication with HMAC-signatures passed as username and password. In that scheme username represents user login as usual and password should be constructed as follows: *password := urlsafe\_base64\_without\_padding(expire\_timestamp || hmac\_sha256(secret, "dumbproxy grant token v1" || username || expire\_timestamp))*, where *expire_timestamp* is 64-bit big-endian UNIX timestamp and *||* is a concatenation operator. [This Python script](https://gist.github.com/Snawoot/2b5acc232680d830f0f308f14e540f1d) can be used as a reference implementation of signing.
+basic\_hmac\_auth helper enables Squid basic authentication with HMAC-signatures passed as username and password. In that scheme username represents user login as usual and password should be constructed as follows:
+
+*password := urlsafe\_base64\_without\_padding(expire\_timestamp || hmac\_sha256(secret, "dumbproxy grant token v1" || username || expire\_timestamp))*
+
+where *expire_timestamp* is 64-bit big-endian UNIX timestamp and *||* is a concatenation operator. [This Python script](https://gist.github.com/Snawoot/2b5acc232680d830f0f308f14e540f1d) can be used as a reference implementation of signing.
 
 ## Usage
 
