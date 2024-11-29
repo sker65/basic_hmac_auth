@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/SenseUnit/basic_hmac_auth/hmac"
 	"github.com/SenseUnit/basic_hmac_auth/proto"
