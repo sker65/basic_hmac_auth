@@ -2,9 +2,12 @@ package handler
 
 import (
 	"bufio"
+	"bytes"
+	"fmt"
 	"io"
 	"log"
 
+	"github.com/SenseUnit/basic_hmac_auth/hmac"
 	"github.com/SenseUnit/basic_hmac_auth/proto"
 )
 
@@ -27,7 +30,20 @@ func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
 	scanner := proto.NewElasticLineScanner(rd, '\n')
 
 	for scanner.Scan() {
-		log.Printf("line=%q", string(scanner.Bytes()))
+		parts := bytes.SplitN(scanner.Bytes(), []byte{' '}, 4)
+		if len(parts) < 3 {
+			err := fmt.Errorf("bad request line sent to auth helper: %q", string(scanner.Bytes()))
+			return err
+		}
+		channelID := parts[0]
+		username := proto.RFC1738Unescape(parts[1])
+		password := proto.RFC1738Unescape(parts[2])
+
+		if hmac.VerifyHMACLoginAndPassword(a.Secret, username, password) {
+			fmt.Fprintf(output, "%s OK\n", channelID)
+		} else {
+			fmt.Fprintf(output, "%s ERR\n", channelID)
+		}
 	}
 
 	return scanner.Err()
