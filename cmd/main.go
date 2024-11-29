@@ -20,6 +20,7 @@ const (
 )
 
 var (
+	bufferSize    = flag.Int("buffer-size", 0, "initial buffer size for stream parsing")
 	hexSecret     = flag.String("secret", "", "hex-encoded HMAC secret value")
 	hexSecretFile = flag.String("secret-file", "", "file containing single line with hex-encoded secret")
 	showVersion   = flag.Bool("version", false, "show program version and exit")
@@ -65,7 +66,8 @@ func run() int {
 	}
 
 	err = (&handler.BasicHMACAuthHandler{
-		Secret: secret,
+		Secret:     secret,
+		BufferSize: *bufferSize,
 	}).Run(os.Stdin, os.Stdout)
 	if err != nil {
 		log.Printf("auth handler terminated with error: %v", err)
