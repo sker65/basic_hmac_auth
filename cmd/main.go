@@ -1,0 +1,91 @@
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"encoding/hex"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"log"
+	"os"
+)
+
+var version = "undefined"
+
+const (
+	envKeySecret = "BASIC_AUTH_HMAC_SECRET"
+)
+
+var (
+	hexSecret     = flag.String("secret", "", "hex-encoded HMAC secret value")
+	hexSecretFile = flag.String("secret-file", "", "file containing single line with hex-encoded secret")
+	showVersion   = flag.Bool("version", false, "show program version and exit")
+)
+
+func run() int {
+	var err error
+
+	flag.Parse()
+	if *showVersion {
+		fmt.Println(version)
+		return 0
+	}
+
+	if *hexSecret != "" && *hexSecretFile != "" {
+		log.Print("Options \"-secret\" and \"-secret-file\" are mutually exclusive. Exiting...")
+		return 2
+	}
+
+	hs := os.Getenv(envKeySecret)
+	if *hexSecret != "" {
+		hs = *hexSecret
+	}
+	if *hexSecretFile != "" {
+		r, err := readSecretFromFile(*hexSecretFile)
+		if err != nil {
+			log.Printf("read of secret from file %q failed: %v", *hexSecretFile, err)
+			return 1
+		}
+		hs = r
+	}
+
+	if hs == "" {
+		log.Print(`secret is not specified! Please set "-secret" or "-secret-file"`+
+		` command line options or `+envKeySecret+` environment variable.`)
+		return 2
+	}
+
+	secret, err := hex.DecodeString(hs)
+	if err != nil {
+		log.Printf("unable to hex-decode secret: %v", err)
+		return 3
+	}
+
+	log.Printf("secret=%x\n", secret)
+
+	return 0
+}
+
+func readSecretFromFile(filename string) (string, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return "", fmt.Errorf("unable to open secret file for reading: %w", err)
+	}
+	defer f.Close()
+
+	rd := bufio.NewReader(f)
+	buf, err := rd.ReadBytes('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", fmt.Errorf("secret file reading failed: %w", err)
+	}
+
+	buf = bytes.TrimSpace(buf)
+	return string(buf), nil
+}
+
+func main() {
+	log.Default().SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
+	os.Exit(run())
+}
