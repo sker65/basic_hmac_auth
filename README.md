@@ -46,3 +46,7 @@ Usage of /usr/local/bin/basic_hmac_auth:
   -version
     	show program version and exit
 ```
+
+## See also
+
+* This HMAC auth format was ported to Squid from [dumbproxy](https://github.com/SenseUnit/dumbproxy) project. dumbproxy is a modern lightweight, performant and easy to use proxy server.
