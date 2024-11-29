@@ -8,7 +8,7 @@ MAIN_PACKAGE = ./cmd
 
 GO := go
 
-src = $(wildcard *.go */*.go */*/*.go) go.mod go.sum
+src = $(wildcard *.go */*.go */*/*.go) go.mod
 
 native: bin-native
 all: bin-linux-amd64 bin-linux-386 bin-linux-arm bin-linux-arm64 \
