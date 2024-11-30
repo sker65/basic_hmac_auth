@@ -1,12 +1,12 @@
 package hmac
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"encoding/base64"
 	"encoding/binary"
 	"hash"
 	"time"
+	"unsafe"
 )
 
 const (
@@ -16,25 +16,26 @@ const (
 
 var hmacSignaturePrefix = []byte(HMACSignaturePrefix)
 
-type HMACToken struct {
-	Expire    int64
-	Signature [HMACSignatureSize]byte
-}
-
 func VerifyHMACLoginAndPassword(mac hash.Hash, login, password []byte) bool {
-	rd := base64.NewDecoder(base64.RawURLEncoding, bytes.NewReader(password))
+	n, err := base64.RawURLEncoding.Decode(password, password)
+	if err != nil {
+		return false
+	}
+	password = password[:n]
 
-	var token HMACToken
-	if err := binary.Read(rd, binary.BigEndian, &token); err != nil {
+	var expire int64
+	if len(password) < int(unsafe.Sizeof(expire)) {
+		return false
+	}
+	expire = int64(binary.BigEndian.Uint64(password[:unsafe.Sizeof(expire)]))
+	password = password[unsafe.Sizeof(expire):]
+
+	if time.Unix(expire, 0).Before(time.Now()) {
 		return false
 	}
 
-	if time.Unix(token.Expire, 0).Before(time.Now()) {
-		return false
-	}
-
-	expectedMAC := CalculateHMACSignature(mac, login, token.Expire)
-	return hmac.Equal(token.Signature[:], expectedMAC)
+	expectedMAC := CalculateHMACSignature(mac, login, expire)
+	return hmac.Equal(password, expectedMAC)
 }
 
 func CalculateHMACSignature(mac hash.Hash, username []byte, expire int64) []byte {
