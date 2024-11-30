@@ -43,9 +43,13 @@ func VerifyHMACLoginAndPassword(mac hash.Hash, login, password []byte) bool {
 }
 
 func CalculateHMACSignature(mac hash.Hash, username []byte, expire int64) []byte {
+	var buf [unsafe.Sizeof(expire)]byte
+	binary.BigEndian.PutUint64(buf[:], uint64(expire))
+
 	mac.Reset()
 	mac.Write(hmacSignaturePrefix)
 	mac.Write(username)
-	binary.Write(mac, binary.BigEndian, expire)
+	mac.Write(buf[:])
+
 	return mac.Sum(nil)
 }
