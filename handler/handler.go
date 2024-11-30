@@ -30,6 +30,8 @@ func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
 
 	mac := hmac.NewHasher(a.Secret)
 
+	emitter := proto.NewResponseEmitter(output)
+
 	for scanner.Scan() {
 		parts := bytes.SplitN(scanner.Bytes(), []byte{' '}, 4)
 		if len(parts) < 3 {
@@ -41,9 +43,13 @@ func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
 		password := proto.RFC1738Unescape(parts[2])
 
 		if hmac.VerifyHMACLoginAndPassword(mac, username, password) {
-			fmt.Fprintf(output, "%s OK\n", channelID)
+			if err := emitter.EmitOK(channelID); err != nil {
+				return fmt.Errorf("response write failed: %w", err)
+			}
 		} else {
-			fmt.Fprintf(output, "%s ERR\n", channelID)
+			if err := emitter.EmitERR(channelID); err != nil {
+				return fmt.Errorf("response write failed: %w", err)
+			}
 		}
 	}
 
