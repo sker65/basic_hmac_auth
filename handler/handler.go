@@ -33,14 +33,22 @@ func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
 	emitter := proto.NewResponseEmitter(output)
 
 	for scanner.Scan() {
-		parts := bytes.SplitN(scanner.Bytes(), []byte{' '}, 4)
-		if len(parts) < 3 {
-			err := fmt.Errorf("bad request line sent to auth helper: %q", string(scanner.Bytes()))
-			return err
+		line := scanner.Bytes()
+
+		before, after, found := bytes.Cut(line, []byte{' '})
+		if !found {
+			return fmt.Errorf("bad request line sent to auth helper: %q", line)
 		}
-		channelID := parts[0]
-		username := proto.RFC1738Unescape(parts[1])
-		password := proto.RFC1738Unescape(parts[2])
+		channelID := before
+
+		before, after, found = bytes.Cut(after, []byte{' '})
+		if !found {
+			return fmt.Errorf("bad request line sent to auth helper: %q", line)
+		}
+		username := proto.RFC1738Unescape(before)
+
+		before, _, _ = bytes.Cut(after, []byte{' '})
+		password := proto.RFC1738Unescape(before)
 
 		if verifier.VerifyLoginAndPassword(username, password) {
 			if err := emitter.EmitOK(channelID); err != nil {
