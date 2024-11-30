@@ -11,7 +11,6 @@ import (
 
 const (
 	HMACSignaturePrefix = "dumbproxy grant token v1"
-	HMACSignatureSize   = 32
 )
 
 var hmacSignaturePrefix = []byte(HMACSignaturePrefix)
