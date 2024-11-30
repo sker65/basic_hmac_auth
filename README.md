@@ -39,6 +39,8 @@ $ basic_hmac_auth -h
 Usage of /usr/local/bin/basic_hmac_auth:
   -buffer-size int
     	initial buffer size for stream parsing
+  -cpu-profile string
+    	write CPU profile to file
   -secret string
     	hex-encoded HMAC secret value
   -secret-file string

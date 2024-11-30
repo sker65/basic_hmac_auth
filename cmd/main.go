@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime/pprof"
 
 	"github.com/SenseUnit/basic_hmac_auth/handler"
 )
@@ -24,6 +25,7 @@ var (
 	hexSecret     = flag.String("secret", "", "hex-encoded HMAC secret value")
 	hexSecretFile = flag.String("secret-file", "", "file containing single line with hex-encoded secret")
 	showVersion   = flag.Bool("version", false, "show program version and exit")
+	cpuProfile    = flag.String("cpu-profile", "", "write CPU profile to file")
 )
 
 func run() int {
@@ -63,6 +65,16 @@ func run() int {
 	if err != nil {
 		log.Printf("unable to hex-decode secret: %v", err)
 		return 3
+	}
+
+	if *cpuProfile != "" {
+		f, err := os.Create(*cpuProfile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
 	}
 
 	err = (&handler.BasicHMACAuthHandler{
