@@ -2,6 +2,7 @@ package hmac
 
 import (
 	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
 	"hash"
@@ -14,6 +15,10 @@ const (
 )
 
 var hmacSignaturePrefix = []byte(HMACSignaturePrefix)
+
+func NewHasher(secret []byte) hash.Hash {
+	return hmac.New(sha256.New, secret)
+}
 
 func VerifyHMACLoginAndPassword(mac hash.Hash, login, password []byte) bool {
 	buf := make([]byte, base64.RawURLEncoding.DecodedLen(len(password)))

@@ -3,8 +3,6 @@ package handler
 import (
 	"bufio"
 	"bytes"
-	chmac "crypto/hmac"
-	"crypto/sha256"
 	"fmt"
 	"io"
 
@@ -30,7 +28,7 @@ func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
 	rd := bufio.NewReaderSize(input, bufSize)
 	scanner := proto.NewElasticLineScanner(rd, '\n')
 
-	mac := chmac.New(sha256.New, a.Secret)
+	mac := hmac.NewHasher(a.Secret)
 
 	for scanner.Scan() {
 		parts := bytes.SplitN(scanner.Bytes(), []byte{' '}, 4)
