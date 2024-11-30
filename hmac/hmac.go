@@ -16,25 +16,30 @@ const (
 var hmacSignaturePrefix = []byte(HMACSignaturePrefix)
 
 func VerifyHMACLoginAndPassword(mac hash.Hash, login, password []byte) bool {
-	n, err := base64.RawURLEncoding.Decode(password, password)
+	buf := make([]byte, base64.RawURLEncoding.DecodedLen(len(password)))
+	n, err := base64.RawURLEncoding.Decode(buf, password)
 	if err != nil {
 		return false
 	}
-	password = password[:n]
+	buf = buf[:n]
 
 	var expire int64
-	if len(password) < int(unsafe.Sizeof(expire)) {
+	if len(buf) < int(unsafe.Sizeof(expire)) {
 		return false
 	}
-	expire = int64(binary.BigEndian.Uint64(password[:unsafe.Sizeof(expire)]))
-	password = password[unsafe.Sizeof(expire):]
+	expire = int64(binary.BigEndian.Uint64(buf[:unsafe.Sizeof(expire)]))
+	buf = buf[unsafe.Sizeof(expire):]
 
 	if time.Unix(expire, 0).Before(time.Now()) {
 		return false
 	}
 
+	if len(buf) < mac.Size() {
+		return false
+	}
+
 	expectedMAC := CalculateHMACSignature(mac, login, expire)
-	return hmac.Equal(password, expectedMAC)
+	return hmac.Equal(buf[:mac.Size()], expectedMAC)
 }
 
 func CalculateHMACSignature(mac hash.Hash, username []byte, expire int64) []byte {
