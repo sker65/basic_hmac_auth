@@ -28,7 +28,7 @@ func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
 	rd := bufio.NewReaderSize(input, bufSize)
 	scanner := proto.NewElasticLineScanner(rd, '\n')
 
-	mac := hmac.NewHasher(a.Secret)
+	verifier := hmac.NewVerifier(a.Secret)
 
 	emitter := proto.NewResponseEmitter(output)
 
@@ -42,7 +42,7 @@ func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
 		username := proto.RFC1738Unescape(parts[1])
 		password := proto.RFC1738Unescape(parts[2])
 
-		if hmac.VerifyHMACLoginAndPassword(mac, username, password) {
+		if verifier.VerifyLoginAndPassword(username, password) {
 			if err := emitter.EmitOK(channelID); err != nil {
 				return fmt.Errorf("response write failed: %w", err)
 			}

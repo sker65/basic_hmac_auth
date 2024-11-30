@@ -12,6 +12,7 @@ import (
 const (
 	HMACSignaturePrefix = "dumbproxy grant token v1"
 	HMACExpireSize      = 8
+	passwordBufferSize  = HMACExpireSize + 64 // for worst case if 512-bit hash is used for some reason
 )
 
 var hmacSignaturePrefix = []byte(HMACSignaturePrefix)
@@ -20,8 +21,26 @@ func NewHasher(secret []byte) hash.Hash {
 	return hmac.New(sha256.New, secret)
 }
 
-func VerifyHMACLoginAndPassword(mac hash.Hash, login, password []byte) bool {
-	buf := make([]byte, base64.RawURLEncoding.DecodedLen(len(password)))
+type Verifier struct {
+	mac hash.Hash
+	buf []byte
+}
+
+func NewVerifier(secret []byte) *Verifier {
+	return &Verifier{
+		mac: hmac.New(sha256.New, secret),
+	}
+}
+
+func (v *Verifier) ensureBufferSize(size int) {
+	if len(v.buf) < size {
+		v.buf = make([]byte, size)
+	}
+}
+
+func (v *Verifier) VerifyLoginAndPassword(login, password []byte) bool {
+	v.ensureBufferSize(base64.RawURLEncoding.DecodedLen(len(password)))
+	buf := v.buf
 	n, err := base64.RawURLEncoding.Decode(buf, password)
 	if err != nil {
 		return false
@@ -39,22 +58,22 @@ func VerifyHMACLoginAndPassword(mac hash.Hash, login, password []byte) bool {
 		return false
 	}
 
-	if len(buf) < mac.Size() {
+	if len(buf) < v.mac.Size() {
 		return false
 	}
 
-	expectedMAC := CalculateHMACSignature(mac, login, expire)
-	return hmac.Equal(buf[:mac.Size()], expectedMAC)
+	expectedMAC := v.calculateHMACSignature(login, expire)
+	return hmac.Equal(buf[:v.mac.Size()], expectedMAC)
 }
 
-func CalculateHMACSignature(mac hash.Hash, username []byte, expire int64) []byte {
+func (v *Verifier) calculateHMACSignature(username []byte, expire int64) []byte {
 	var buf [HMACExpireSize]byte
 	binary.BigEndian.PutUint64(buf[:], uint64(expire))
 
-	mac.Reset()
-	mac.Write(hmacSignaturePrefix)
-	mac.Write(username)
-	mac.Write(buf[:])
+	v.mac.Reset()
+	v.mac.Write(hmacSignaturePrefix)
+	v.mac.Write(username)
+	v.mac.Write(buf[:])
 
-	return mac.Sum(nil)
+	return v.mac.Sum(nil)
 }
