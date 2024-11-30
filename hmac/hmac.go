@@ -3,9 +3,9 @@ package hmac
 import (
 	"bytes"
 	"crypto/hmac"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
+	"hash"
 	"time"
 )
 
@@ -21,7 +21,7 @@ type HMACToken struct {
 	Signature [HMACSignatureSize]byte
 }
 
-func VerifyHMACLoginAndPassword(secret, login, password []byte) bool {
+func VerifyHMACLoginAndPassword(mac hash.Hash, login, password []byte) bool {
 	rd := base64.NewDecoder(base64.RawURLEncoding, bytes.NewReader(password))
 
 	var token HMACToken
@@ -33,12 +33,12 @@ func VerifyHMACLoginAndPassword(secret, login, password []byte) bool {
 		return false
 	}
 
-	expectedMAC := CalculateHMACSignature(secret, login, token.Expire)
+	expectedMAC := CalculateHMACSignature(mac, login, token.Expire)
 	return hmac.Equal(token.Signature[:], expectedMAC)
 }
 
-func CalculateHMACSignature(secret, username []byte, expire int64) []byte {
-	mac := hmac.New(sha256.New, secret)
+func CalculateHMACSignature(mac hash.Hash, username []byte, expire int64) []byte {
+	mac.Reset()
 	mac.Write(hmacSignaturePrefix)
 	mac.Write(username)
 	binary.Write(mac, binary.BigEndian, expire)

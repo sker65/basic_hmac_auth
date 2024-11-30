@@ -3,6 +3,8 @@ package handler
 import (
 	"bufio"
 	"bytes"
+	chmac "crypto/hmac"
+	"crypto/sha256"
 	"fmt"
 	"io"
 
@@ -28,6 +30,8 @@ func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
 	rd := bufio.NewReaderSize(input, bufSize)
 	scanner := proto.NewElasticLineScanner(rd, '\n')
 
+	mac := chmac.New(sha256.New, a.Secret)
+
 	for scanner.Scan() {
 		parts := bytes.SplitN(scanner.Bytes(), []byte{' '}, 4)
 		if len(parts) < 3 {
@@ -38,7 +42,7 @@ func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
 		username := proto.RFC1738Unescape(parts[1])
 		password := proto.RFC1738Unescape(parts[2])
 
-		if hmac.VerifyHMACLoginAndPassword(a.Secret, username, password) {
+		if hmac.VerifyHMACLoginAndPassword(mac, username, password) {
 			fmt.Fprintf(output, "%s OK\n", channelID)
 		} else {
 			fmt.Fprintf(output, "%s ERR\n", channelID)
