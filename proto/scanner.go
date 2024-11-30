@@ -1,20 +1,23 @@
 package proto
 
-import "io"
+import (
+	"bufio"
+	"io"
+)
 
-type BytesReader interface {
-	ReadBytes(byte) ([]byte, error)
+type ReadSlicer interface {
+	ReadSlice(byte) ([]byte, error)
 }
 
 type ElasticLineScanner struct {
 	line    []byte
-	reader  BytesReader
+	reader  ReadSlicer
 	lastErr error
 	done    bool
 	delim   byte
 }
 
-func NewElasticLineScanner(reader BytesReader, delim byte) *ElasticLineScanner {
+func NewElasticLineScanner(reader ReadSlicer, delim byte) *ElasticLineScanner {
 	return &ElasticLineScanner{
 		reader: reader,
 		delim:  delim,
@@ -37,19 +40,28 @@ func (els *ElasticLineScanner) Scan() bool {
 		return false
 	}
 
-	data, err := els.reader.ReadBytes(els.delim)
+	els.line = els.line[:0]
+	var (
+		data []byte
+		err  error
+	)
+	for data, err = els.reader.ReadSlice(els.delim); ; data, err = els.reader.ReadSlice(els.delim) {
+		els.line = append(els.line, data...)
+		if err != bufio.ErrBufferFull {
+			break
+		}
+	}
 	if err != nil {
 		els.done = true
 		els.lastErr = err
-		if len(data) == 0 {
+		if len(els.line) == 0 {
 			return false
 		}
 	} else {
 		// strip delimiter if needed
-		if len(data) > 0 && data[len(data)-1] == els.delim {
-			data = data[:len(data)-1]
+		if len(els.line) > 0 && els.line[len(els.line)-1] == els.delim {
+			els.line = els.line[:len(els.line)-1]
 		}
 	}
-	els.line = data
 	return true
 }
