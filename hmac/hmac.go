@@ -7,11 +7,11 @@ import (
 	"encoding/binary"
 	"hash"
 	"time"
-	"unsafe"
 )
 
 const (
 	HMACSignaturePrefix = "dumbproxy grant token v1"
+	HMACExpireSize      = 8
 )
 
 var hmacSignaturePrefix = []byte(HMACSignaturePrefix)
@@ -29,11 +29,11 @@ func VerifyHMACLoginAndPassword(mac hash.Hash, login, password []byte) bool {
 	buf = buf[:n]
 
 	var expire int64
-	if len(buf) < int(unsafe.Sizeof(expire)) {
+	if len(buf) < HMACExpireSize {
 		return false
 	}
-	expire = int64(binary.BigEndian.Uint64(buf[:unsafe.Sizeof(expire)]))
-	buf = buf[unsafe.Sizeof(expire):]
+	expire = int64(binary.BigEndian.Uint64(buf[:HMACExpireSize]))
+	buf = buf[HMACExpireSize:]
 
 	if time.Unix(expire, 0).Before(time.Now()) {
 		return false
@@ -48,7 +48,7 @@ func VerifyHMACLoginAndPassword(mac hash.Hash, login, password []byte) bool {
 }
 
 func CalculateHMACSignature(mac hash.Hash, username []byte, expire int64) []byte {
-	var buf [unsafe.Sizeof(expire)]byte
+	var buf [HMACExpireSize]byte
 	binary.BigEndian.PutUint64(buf[:], uint64(expire))
 
 	mac.Reset()
