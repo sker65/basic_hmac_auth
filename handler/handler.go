@@ -18,6 +18,7 @@ const (
 type BasicHMACAuthHandler struct {
 	Secret     []byte
 	BufferSize int
+	Strict     bool
 }
 
 func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
@@ -28,7 +29,7 @@ func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
 	rd := bufio.NewReaderSize(input, bufSize)
 	scanner := proto.NewElasticLineScanner(rd, '\n')
 
-	verifier := hmac.NewVerifier(a.Secret)
+	verifier := hmac.NewVerifier(a.Secret, a.Strict)
 
 	emitter := proto.NewResponseEmitter(output)
 
