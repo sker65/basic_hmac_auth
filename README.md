@@ -45,6 +45,8 @@ Usage of /usr/local/bin/basic_hmac_auth:
     	hex-encoded HMAC secret value
   -secret-file string
     	file containing single line with hex-encoded secret
+  -strict
+    	require shortest possible, invariant form of encoding (default true)
   -version
     	show program version and exit
 ```

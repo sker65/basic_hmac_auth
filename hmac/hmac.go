@@ -12,7 +12,6 @@ import (
 const (
 	HMACSignaturePrefix = "dumbproxy grant token v1"
 	HMACExpireSize      = 8
-	passwordBufferSize  = HMACExpireSize + 64 // for worst case if 512-bit hash is used for some reason
 )
 
 var hmacSignaturePrefix = []byte(HMACSignaturePrefix)
@@ -22,13 +21,21 @@ func NewHasher(secret []byte) hash.Hash {
 }
 
 type Verifier struct {
-	mac hash.Hash
-	buf []byte
+	mac    hash.Hash
+	buf    []byte
+	dec    *base64.Encoding
+	strict bool
 }
 
-func NewVerifier(secret []byte) *Verifier {
+func NewVerifier(secret []byte, strict bool) *Verifier {
+	dec := base64.RawURLEncoding
+	if strict {
+		dec = dec.Strict()
+	}
 	return &Verifier{
-		mac: hmac.New(sha256.New, secret),
+		mac:    hmac.New(sha256.New, secret),
+		strict: strict,
+		dec:    dec,
 	}
 }
 
@@ -39,10 +46,14 @@ func (v *Verifier) ensureBufferSize(size int) {
 }
 
 func (v *Verifier) VerifyLoginAndPassword(login, password []byte) bool {
-	v.ensureBufferSize(base64.RawURLEncoding.DecodedLen(len(password)))
+	if v.strict && len(password) != v.dec.EncodedLen(HMACExpireSize+v.mac.Size()) {
+		return false
+	}
+
+	v.ensureBufferSize(v.dec.DecodedLen(len(password)))
 	buf := v.buf
-	n, err := base64.RawURLEncoding.Decode(buf, password)
-	if err != nil {
+	n, err := v.dec.Decode(buf, password)
+	if v.strict && err != nil {
 		return false
 	}
 	buf = buf[:n]
