@@ -23,13 +23,19 @@ func NewHasher(secret []byte) hash.Hash {
 type Verifier struct {
 	mac    hash.Hash
 	buf    []byte
+	dec    *base64.Encoding
 	strict bool
 }
 
 func NewVerifier(secret []byte, strict bool) *Verifier {
+	dec := base64.RawURLEncoding
+	if strict {
+		dec = dec.Strict()
+	}
 	return &Verifier{
 		mac:    hmac.New(sha256.New, secret),
 		strict: strict,
+		dec:    dec,
 	}
 }
 
@@ -40,13 +46,13 @@ func (v *Verifier) ensureBufferSize(size int) {
 }
 
 func (v *Verifier) VerifyLoginAndPassword(login, password []byte) bool {
-	if v.strict && len(password) != base64.RawURLEncoding.EncodedLen(HMACExpireSize+v.mac.Size()) {
+	if v.strict && len(password) != v.dec.EncodedLen(HMACExpireSize+v.mac.Size()) {
 		return false
 	}
 
-	v.ensureBufferSize(base64.RawURLEncoding.DecodedLen(len(password)))
+	v.ensureBufferSize(v.dec.DecodedLen(len(password)))
 	buf := v.buf
-	n, _ := base64.RawURLEncoding.Decode(buf, password)
+	n, _ := v.dec.Decode(buf, password)
 	buf = buf[:n]
 
 	var expire int64
