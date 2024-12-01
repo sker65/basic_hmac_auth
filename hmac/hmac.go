@@ -52,7 +52,10 @@ func (v *Verifier) VerifyLoginAndPassword(login, password []byte) bool {
 
 	v.ensureBufferSize(v.dec.DecodedLen(len(password)))
 	buf := v.buf
-	n, _ := v.dec.Decode(buf, password)
+	n, err := v.dec.Decode(buf, password)
+	if v.strict && err != nil {
+		return false
+	}
 	buf = buf[:n]
 
 	var expire int64
