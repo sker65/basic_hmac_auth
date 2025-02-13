@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/SenseUnit/basic_hmac_auth/hmac"
 	"github.com/SenseUnit/basic_hmac_auth/proto"
@@ -32,6 +33,7 @@ func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
 	verifier := hmac.NewVerifier(a.Secret, a.Strict)
 
 	emitter := proto.NewResponseEmitter(output)
+  proxy_pass := os.Getenv("PROXY_PASS")
 
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -50,6 +52,14 @@ func (a *BasicHMACAuthHandler) Run(input io.Reader, output io.Writer) error {
 
 		before, _, _ = bytes.Cut(after, []byte{' '})
 		password := proto.RFC1738Unescape(before)
+
+		// just for the transitioning time: make the old static password also work
+		if bytes.Equal(username, []byte("octo") ) && bytes.Equal( password, []byte(proxy_pass)) {
+			if err := emitter.EmitOK(channelID); err != nil {
+				return fmt.Errorf("response write failed: %w", err)
+			}
+			continue
+		}
 
 		if verifier.VerifyLoginAndPassword(username, password) {
 			if err := emitter.EmitOK(channelID); err != nil {
